@@ -1,0 +1,18 @@
+services:
+  hotosm-imagery-tile:
+    build:
+      context: ./functions/hotosm-imagery-tile
+    ports:
+      - "8080:8080"
+    environment:
+      STAC_API_URL: https://api.imagery.hotosm.org/stac
+      STAC_ASSET_KEY: visual
+      STAC_SEARCH_LIMIT: "50"
+      TILE_FORMAT: PNG
+      TILE_SIZE: "512"
+      # GDAL tuning: keep /vsicurl/ caches warm between requests.
+      GDAL_DISABLE_READDIR_ON_OPEN: "EMPTY_DIR"
+      GDAL_HTTP_MERGE_CONSECUTIVE_RANGES: "YES"
+      VSI_CACHE: "TRUE"
+      VSI_CACHE_SIZE: "536870912"
+      CPL_VSIL_CURL_ALLOWED_EXTENSIONS: ".tif,.TIF,.tiff,.TIFF"

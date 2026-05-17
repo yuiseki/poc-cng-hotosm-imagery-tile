@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>poc-cng-hotosm-imagery-tile viewer</title>
+  <meta name="viewport" content="initial-scale=1, width=device-width">
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <style>
+    html, body, #map { margin: 0; padding: 0; height: 100%; }
+    #panel {
+      position: absolute; top: 8px; left: 8px; z-index: 1;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 10px; border-radius: 6px;
+      font: 12px/1.4 -apple-system, system-ui, sans-serif;
+      max-width: 360px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+    #panel h1 { margin: 0 0 6px 0; font-size: 12px; }
+    #panel .row { margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+    #panel input { flex: 1; min-width: 0; box-sizing: border-box; }
+    #status { margin-top: 4px; color: #555; }
+    #items {
+      margin-top: 6px; max-height: 280px; overflow: auto;
+      border-top: 1px solid #ddd;
+    }
+    #items div {
+      padding: 4px 2px; cursor: pointer; border-bottom: 1px solid #eee;
+      font-size: 11px;
+    }
+    #items div:hover { background: #f4f4f4; }
+    #items .id { color: #333; }
+    #items .ts { color: #888; }
+  </style>
+</head>
+<body>
+<div id="panel">
+  <h1>poc-cng-hotosm-imagery-tile</h1>
+  <div class="row">
+    <label>Server:</label>
+    <input id="server" value="http://localhost:8080">
+  </div>
+  <div id="status">idle</div>
+  <div id="items"></div>
+</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const serverInput = document.getElementById('server');
+if (params.get('server')) serverInput.value = params.get('server');
+const statusEl = document.getElementById('status');
+const itemsEl = document.getElementById('items');
+
+const initialLng = parseFloat(params.get('lng') ?? '7.690');
+const initialLat = parseFloat(params.get('lat') ?? '49.564');
+const initialZoom = parseFloat(params.get('zoom') ?? '14');
+
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tile.yuiseki.net/styles/osm-fiord/style.json',
+  center: [initialLng, initialLat],
+  zoom: initialZoom,
+  hash: true
+});
+
+function serverUrl() {
+  return serverInput.value.replace(/\/$/, '');
+}
+
+const OVERLAY_SOURCE = 'hotosm-overlay';
+const OVERLAY_LAYER = 'hotosm-overlay-layer';
+
+function ensureOverlay() {
+  // Re-add the raster source so its `tiles[]` URL picks up the latest
+  // server input. Tile URL itself does not depend on the bbox; the
+  // server resolves it per request via STAC search.
+  const url = `${serverUrl()}/tiles/{z}/{x}/{y}.png`;
+  const src = map.getSource(OVERLAY_SOURCE);
+  if (src && src.tiles && src.tiles[0] === url) return;
+
+  if (map.getLayer(OVERLAY_LAYER)) map.removeLayer(OVERLAY_LAYER);
+  if (map.getSource(OVERLAY_SOURCE)) map.removeSource(OVERLAY_SOURCE);
+
+  map.addSource(OVERLAY_SOURCE, {
+    type: 'raster',
+    tiles: [url],
+    tileSize: 512,
+    attribution: 'Imagery © HOTOSM / OpenAerialMap contributors'
+  });
+  map.addLayer({ id: OVERLAY_LAYER, type: 'raster', source: OVERLAY_SOURCE });
+}
+
+map.on('style.load', () => {
+  ensureOverlay();
+  scheduleSearch();
+});
+
+let searchTimer = null;
+let inflight = null;
+function scheduleSearch() {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 300);
+}
+
+async function runSearch() {
+  ensureOverlay();
+  const b = map.getBounds();
+  const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(',');
+  const url = `${serverUrl()}/search?bbox=${encodeURIComponent(bbox)}&limit=20`;
+  if (inflight) inflight.abort();
+  const controller = new AbortController();
+  inflight = controller;
+  statusEl.textContent = 'searching…';
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    renderItems(data.items || []);
+    statusEl.textContent = `${data.count ?? (data.items?.length || 0)} items in view`;
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    statusEl.textContent = `search failed: ${err.message}`;
+  } finally {
+    if (inflight === controller) inflight = null;
+  }
+}
+
+function renderItems(items) {
+  itemsEl.innerHTML = '';
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.color = '#999';
+    empty.textContent = 'no imagery in this view';
+    itemsEl.appendChild(empty);
+    return;
+  }
+  for (const item of items) {
+    const el = document.createElement('div');
+    const idSpan = document.createElement('span');
+    idSpan.className = 'id';
+    idSpan.textContent = item.id;
+    const tsSpan = document.createElement('span');
+    tsSpan.className = 'ts';
+    tsSpan.textContent = '  ' + (item.datetime || '');
+    el.appendChild(idSpan);
+    el.appendChild(tsSpan);
+    el.onclick = () => zoomToItem(item);
+    itemsEl.appendChild(el);
+  }
+}
+
+function zoomToItem(item) {
+  if (!item.bbox || item.bbox.length !== 4) return;
+  const [w, s, e, n] = item.bbox;
+  map.fitBounds([[w, s], [e, n]], { padding: 40, maxZoom: 19, duration: 600 });
+}
+
+// Auto-search whenever the camera comes to rest.
+map.on('idle', scheduleSearch);
+serverInput.addEventListener('change', () => {
+  ensureOverlay();
+  scheduleSearch();
+});
+</script>
+</body>
+</html>

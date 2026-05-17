@@ -1,0 +1,44 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hotosm-imagery-tile
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      containers:
+        - image: NODE_IP:5000/hotosm-imagery-tile:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: STAC_API_URL
+              value: https://api.imagery.hotosm.org/stac
+            - name: STAC_ASSET_KEY
+              value: visual
+            - name: STAC_SEARCH_LIMIT
+              value: "50"
+            - name: TILE_FORMAT
+              value: PNG
+            - name: TILE_SIZE
+              value: "512"
+            - name: GDAL_DISABLE_READDIR_ON_OPEN
+              value: EMPTY_DIR
+            - name: GDAL_HTTP_MERGE_CONSECUTIVE_RANGES
+              value: "YES"
+            - name: VSI_CACHE
+              value: "TRUE"
+            - name: VSI_CACHE_SIZE
+              value: "536870912"
+            - name: CPL_VSIL_CURL_ALLOWED_EXTENSIONS
+              value: ".tif,.TIF,.tiff,.TIFF"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
