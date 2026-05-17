@@ -4,9 +4,11 @@
 
 | | |
 | --- | --- |
+| **viewer (static)** | https://yuiseki.github.io/poc-cng-hotosm-imagery-tile/ |
+| **function (serverless)** | https://hotosm-imagery-tile.yuiseki.com |
+| **example tile URL** | https://hotosm-imagery-tile.yuiseki.com/tiles/15/29043/12966.png |
 | **STAC source** | https://api.imagery.hotosm.org/stac (OpenAerialMap-backed) |
 | **runtime** | FastAPI + rio-tiler + STAC search, Knative-ready |
-| **viewer** | `docs/index.html` (MapLibre GL JS, static) |
 
 ## Motivation
 
