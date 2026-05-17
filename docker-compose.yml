@@ -1,7 +1,8 @@
 services:
   hotosm-imagery-tile:
     build:
-      context: ./functions/hotosm-imagery-tile
+      context: .
+      dockerfile: docker/Dockerfile
     ports:
       - "8080:8080"
     environment:

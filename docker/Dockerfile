@@ -11,6 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
+ENV PYTHONPATH=/app/src
 
 ENV STAC_API_URL=https://api.imagery.hotosm.org/stac
 ENV TILE_FORMAT=PNG
@@ -20,4 +21,4 @@ ENV STAC_SEARCH_LIMIT=50
 
 EXPOSE 8080
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "hotosm_imagery_tile.main:app", "--host", "0.0.0.0", "--port", "8080"]

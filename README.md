@@ -94,9 +94,9 @@ In the viewer, pan to an area, click **search items in view** to list candidate 
 ## Knative deployment
 
 ```bash
-docker build -t NODE_IP:5000/hotosm-imagery-tile:latest ./functions/hotosm-imagery-tile
+docker build -t NODE_IP:5000/hotosm-imagery-tile:latest -f docker/Dockerfile .
 docker push NODE_IP:5000/hotosm-imagery-tile:latest
-sed "s/NODE_IP/YOUR_NODE_IP/g" manifests/knative/hotosm-imagery-tile.yaml | kubectl apply -f -
+sed "s/NODE_IP/YOUR_NODE_IP/g" k8s/ksvc.yaml | kubectl apply -f -
 ```
 
 `minScale: 0` is fine because the cold start path is just "import rasterio, open one /vsicurl/ COG", not "fetch a 512-item STAC catalog" as in the Overture buildings study. First-tile latency is dominated by the STAC search + COG IFD fetch, both of which are HTTP range reads.
@@ -108,20 +108,20 @@ sed "s/NODE_IP/YOUR_NODE_IP/g" manifests/knative/hotosm-imagery-tile.yaml | kube
 ├── README.md
 ├── Makefile
 ├── docker-compose.yml
+├── requirements.txt
+├── docker/
+│   └── Dockerfile
 ├── docs/
 │   └── index.html              MapLibre viewer (static)
-├── functions/
-│   └── hotosm-imagery-tile/
-│       ├── Dockerfile
-│       ├── requirements.txt
-│       └── src/
-│           ├── main.py         FastAPI routes + rio-tiler render
-│           └── stac_client.py  Thin STAC search client
-├── manifests/
-│   └── knative/
-│       └── hotosm-imagery-tile.yaml
-└── scripts/
-    └── verify.sh               Smoke test
+├── k8s/
+│   └── ksvc.yaml               Knative Service manifest
+├── scripts/
+│   └── verify.sh               Smoke test
+└── src/
+    └── hotosm_imagery_tile/
+        ├── __init__.py
+        ├── main.py             FastAPI routes + rio-tiler render
+        └── stac_client.py      Thin STAC search client
 ```
 
 ## Relationship to neighbouring repos
