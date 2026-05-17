@@ -2,31 +2,40 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: hotosm-imagery-tile
-  namespace: default
+  namespace: knative-pool
 spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/minScale: "0"
-        autoscaling.knative.dev/maxScale: "3"
+        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/max-scale: "3"
+        autoscaling.knative.dev/target: "5"
+        # STAC search + remote COG reads (vsicurl) both add latency to the
+        # first request, so keep pods around a bit longer to amortize.
+        autoscaling.knative.dev/scale-down-delay: "60s"
     spec:
+      containerConcurrency: 5
+      timeoutSeconds: 120
       containers:
-        - image: NODE_IP:5000/hotosm-imagery-tile:latest
+        - image: hotosm-imagery-tile:0.1.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
+            - name: HOST
+              value: "0.0.0.0"
             - name: STAC_API_URL
-              value: https://api.imagery.hotosm.org/stac
+              value: "https://api.imagery.hotosm.org/stac"
             - name: STAC_ASSET_KEY
-              value: visual
+              value: "visual"
             - name: STAC_SEARCH_LIMIT
               value: "50"
             - name: TILE_FORMAT
-              value: PNG
+              value: "PNG"
             - name: TILE_SIZE
               value: "512"
             - name: GDAL_DISABLE_READDIR_ON_OPEN
-              value: EMPTY_DIR
+              value: "EMPTY_DIR"
             - name: GDAL_HTTP_MERGE_CONSECUTIVE_RANGES
               value: "YES"
             - name: VSI_CACHE
@@ -37,8 +46,8 @@ spec:
               value: ".tif,.TIF,.tiff,.TIFF"
           resources:
             requests:
+              cpu: "200m"
               memory: "256Mi"
-              cpu: "250m"
             limits:
+              cpu: "2"
               memory: "1Gi"
-              cpu: "1000m"

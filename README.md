@@ -94,12 +94,17 @@ In the viewer, pan to an area, click **search items in view** to list candidate 
 ## Knative deployment
 
 ```bash
-docker build -t NODE_IP:5000/hotosm-imagery-tile:latest -f docker/Dockerfile .
-docker push NODE_IP:5000/hotosm-imagery-tile:latest
-sed "s/NODE_IP/YOUR_NODE_IP/g" k8s/ksvc.yaml | kubectl apply -f -
+# build the image locally, import it into the containerd k8s.io namespace,
+# then apply the Knative Service.
+docker build -t hotosm-imagery-tile:0.1.0 -f docker/Dockerfile .
+docker save hotosm-imagery-tile:0.1.0 | sudo ctr -n=k8s.io images import -
+kubectl apply -f k8s/ksvc.yaml
+kubectl -n knative-pool get ksvc hotosm-imagery-tile
 ```
 
-`minScale: 0` is fine because the cold start path is just "import rasterio, open one /vsicurl/ COG", not "fetch a 512-item STAC catalog" as in the Overture buildings study. First-tile latency is dominated by the STAC search + COG IFD fetch, both of which are HTTP range reads.
+The manifest assumes a single-node Knative cluster where `containerd` runs as the kubelet CRI and images are loaded via `ctr` instead of a registry; `imagePullPolicy: IfNotPresent` avoids accidental pulls.
+
+`min-scale: 0` is fine because the cold start path is just "import rasterio, open one /vsicurl/ COG", not "fetch a 512-item STAC catalog" as in the Overture buildings study. First-tile latency is dominated by the STAC search + COG IFD fetch, both of which are HTTP range reads. `scale-down-delay: 60s` keeps a pod warm during a typical viewer browsing session.
 
 ## Repository structure
 
