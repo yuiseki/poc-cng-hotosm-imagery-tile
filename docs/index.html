@@ -52,9 +52,12 @@ if (params.get('server')) serverInput.value = params.get('server');
 const statusEl = document.getElementById('status');
 const itemsEl = document.getElementById('items');
 
-const initialLng = parseFloat(params.get('lng') ?? '7.690');
-const initialLat = parseFloat(params.get('lat') ?? '49.564');
-const initialZoom = parseFloat(params.get('zoom') ?? '14');
+// Default to the 2021 Atami debris-flow scar (Izusan, Shizuoka). HOTOSM
+// volunteers captured drone imagery here, so the auto-pick layer kicks
+// in immediately on first load.
+const initialLng = parseFloat(params.get('lng') ?? '139.08407');
+const initialLat = parseFloat(params.get('lat') ?? '35.11442');
+const initialZoom = parseFloat(params.get('zoom') ?? '13.62');
 
 const map = new maplibregl.Map({
   container: 'map',
