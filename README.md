@@ -144,6 +144,7 @@ Together they sketch a small CNG function node that can serve dynamic raster + v
 - No cache layer: each tile request hits STAC search and COG IFD fetch. CDN caching the public URL is recommended.
 - Auto-pick assumes the chosen item's COG actually covers the tile pixels. If it only covers a corner, the response is the tile rendered against the available pixels with `nodata` elsewhere; if it is entirely outside, the loop falls through to the next candidate.
 - Only `visual` assets are rendered. Multi-band scientific stacks (Sentinel-2 etc.) would need a band-math layer that this PoC does not include.
+- Auto-pick `/tiles/{z}/{x}/{y}` skips items whose COG has fewer than 3 bands (e.g. DSM/DTM in float32). Such items often appear paired with RGB visuals in HOTOSM and would otherwise be rendered as grayscale elevation surfaces, which is misleading for a viewer that promises imagery. To render a non-RGB item explicitly, use `/items/{id}/tiles/...`.
 
 ## License
 

@@ -224,8 +224,12 @@ def tile(
         if not cog_url:
             continue
         try:
-            return _render_tile(cog_url, z, x, y, fmt, source_label=item.get("id", ""))
-        except TileOutsideBounds as exc:
+            return _render_tile(
+                cog_url, z, x, y, fmt,
+                source_label=item.get("id", ""),
+                require_rgb=True,
+            )
+        except (TileOutsideBounds, NotVisualImagery) as exc:
             last_error = exc
             continue
         except Exception as exc:
@@ -235,16 +239,43 @@ def tile(
 
     if isinstance(last_error, TileOutsideBounds):
         raise HTTPException(status_code=404, detail="no COG covers this tile")
+    if isinstance(last_error, NotVisualImagery):
+        raise HTTPException(
+            status_code=404,
+            detail="no RGB visual COG available for this tile (only non-RGB items found, "
+                   "e.g. DSM/DTM). Use /items/<id>/tiles/... to render a specific item.",
+        )
     raise HTTPException(
         status_code=500,
         detail=f"all candidate COGs failed: {last_error}",
     )
 
 
-def _render_tile(cog_url: str, z: int, x: int, y: int, fmt: str, source_label: str) -> Response:
+class NotVisualImagery(Exception):
+    """Raised when the COG is not a 3+ band visual RGB image (e.g. DSM/DTM)."""
+
+
+def _render_tile(
+    cog_url: str,
+    z: int,
+    x: int,
+    y: int,
+    fmt: str,
+    source_label: str,
+    require_rgb: bool = False,
+) -> Response:
     fmt_upper = fmt.upper()
     media_type = MEDIA_TYPES.get(fmt_upper, "image/png")
     with COGReader(_vsicurl(cog_url)) as cog:
+        if require_rgb:
+            # Auto-pick path: skip single-band COGs (DSM/DTM rendered as
+            # grayscale would mislead viewer users into thinking that's the
+            # only imagery available, when an RGB sibling item often exists).
+            n_bands = cog.info().count
+            if n_bands < 3:
+                raise NotVisualImagery(
+                    f"{cog_url} has {n_bands} band(s); expected RGB visual"
+                )
         img = cog.tile(x, y, z, tilesize=TILE_SIZE)
         data = img.render(img_format=fmt_upper)
     return Response(
