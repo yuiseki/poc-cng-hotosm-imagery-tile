@@ -16,8 +16,10 @@ spec:
     spec:
       containerConcurrency: 5
       timeoutSeconds: 120
+      nodeSelector:
+        yuiseki.net/role: compute
       containers:
-        - image: hotosm-imagery-tile:0.1.0
+        - image: 192.168.0.90:5000/hotosm-imagery-tile:0.1.1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
