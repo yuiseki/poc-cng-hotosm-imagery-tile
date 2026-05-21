@@ -37,7 +37,7 @@
   <h1>poc-cng-hotosm-imagery-tile</h1>
   <div class="row">
     <label>Server:</label>
-    <input id="server" value="https://hotosm-imagery-tile.yuiseki.com">
+    <input id="server" value="">
   </div>
   <div id="status">idle</div>
   <div id="items"></div>
@@ -48,9 +48,16 @@
 <script>
 const params = new URLSearchParams(location.search);
 const serverInput = document.getElementById('server');
-if (params.get('server')) serverInput.value = params.get('server');
 const statusEl = document.getElementById('status');
 const itemsEl = document.getElementById('items');
+
+function defaultServerForHost(hostname) {
+  if (hostname === 'yuiseki.github.io') return 'https://hotosm-imagery-tile.yuiseki.com';
+  if (hostname === 'www.yuiseki.dev') return 'https://hotosm-imagery-tile.yuiseki.dev';
+  return 'https://hotosm-imagery-tile.yuiseki.dev';
+}
+
+serverInput.value = params.get('server') || defaultServerForHost(location.hostname);
 
 // Default to the 2021 Atami debris-flow scar (Izusan, Shizuoka). HOTOSM
 // volunteers captured drone imagery here, so the auto-pick layer kicks
