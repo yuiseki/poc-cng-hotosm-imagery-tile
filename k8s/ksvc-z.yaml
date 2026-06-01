@@ -10,16 +10,12 @@ spec:
         autoscaling.knative.dev/min-scale: "0"
         autoscaling.knative.dev/max-scale: "3"
         autoscaling.knative.dev/target: "5"
-        # STAC search + remote COG reads (vsicurl) both add latency to the
-        # first request, so keep pods around a bit longer to amortize.
         autoscaling.knative.dev/scale-down-delay: "60s"
     spec:
       containerConcurrency: 5
       timeoutSeconds: 120
-      nodeSelector:
-        yuiseki.net/role: compute
       containers:
-        - image: 192.168.0.90:5000/hotosm-imagery-tile:0.1.2
+        - image: hotosm-imagery-tile:0.1.2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

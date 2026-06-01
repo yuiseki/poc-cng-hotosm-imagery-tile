@@ -96,11 +96,19 @@ In the viewer, pan to an area, click **search items in view** to list candidate 
 
 ## Knative deployment
 
+### `z` cluster (`.com`, local image import)
+
+```bash
+kubectl apply -f k8s/ksvc-z.yaml
+```
+
+### `pi5` cluster (`.dev`, LAN registry)
+
 ```bash
 # build the image and push it to a registry reachable from every node,
 # then apply the Knative Service.
-docker build -t 192.168.0.90:5000/hotosm-imagery-tile:0.1.1 -f docker/Dockerfile .
-docker push 192.168.0.90:5000/hotosm-imagery-tile:0.1.1
+docker build -t 192.168.0.90:5000/hotosm-imagery-tile:0.1.2 -f docker/Dockerfile .
+docker push 192.168.0.90:5000/hotosm-imagery-tile:0.1.2
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/ksvc.yaml
 kubectl -n knative-pool get ksvc hotosm-imagery-tile
