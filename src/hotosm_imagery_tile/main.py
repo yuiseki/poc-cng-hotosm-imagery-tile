@@ -80,18 +80,36 @@ def _stac() -> STACClient:
     return app.state.stac
 
 
+def _health_payload() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "status": "ok",
+        "service": "hotosm-imagery-tile",
+    }
+
+
 @app.get("/")
 def root():
     return {
-        "service": "hotosm-imagery-tile",
+        **_health_payload(),
         "stac_api": STAC_API_URL,
         "asset_key": STAC_ASSET_KEY,
+        "endpoints": {
+            "health": "/health",
+            "healthz": "/healthz",
+            "search": "/search",
+        },
     }
+
+
+@app.get("/health")
+def health():
+    return _health_payload()
 
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    return _health_payload()
 
 
 @app.get("/search")

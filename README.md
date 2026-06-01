@@ -51,6 +51,7 @@ Both share the same rio-tiler render path, so they produce identical bytes for t
 | Path | Description |
 | --- | --- |
 | `GET /` | Service info |
+| `GET /health` | Health check alias |
 | `GET /healthz` | Health check |
 | `GET /search?bbox=W,S,E,N&datetime=...&limit=N` | Proxy STAC search, returns a flat item list with `cog` href |
 | `GET /items/{id}/metadata` | Open the item's COG and return bounds / zoom / dtype / bands |
